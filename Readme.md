@@ -14,7 +14,7 @@ This is a simple plugin which allows you to save previous frame's buffer into a 
 
 * Download the plugin source and put into your Project/Plugins folder.
 
-* Or, you can download pre-build version from repo's release page
+* Or, you can download pre-build version from repo's release page : https://github.com/ldl19691031/ClonePrevBufferToRT/releases/download/1.0/CopyPrevFrameBuffer_5.4.7z
 
 ### Setup
 
