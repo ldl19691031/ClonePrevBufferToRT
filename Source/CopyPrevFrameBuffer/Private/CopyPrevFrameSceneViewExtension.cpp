@@ -11,7 +11,7 @@
 #include "PostProcess/PostProcessMaterialInputs.h"
 #include "DataDrivenShaderPlatformInfo.h"
 #include "TextureResource.h"
-
+#include "Async/Async.h"
 void FCopyPrevFrameSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& View, const FPostProcessingInputs& Inputs)
 {
     if (NeedCopyPrevFrame == false)
@@ -41,10 +41,12 @@ void FCopyPrevFrameSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuild
         const float RTSizeScale = CopyPrevFrameBufferSettings->RTSizeScale;
         const FIntPoint RTSize = FIntPoint(FMath::Max(1, FMath::RoundToInt(PrimaryViewSize.X * RTSizeScale)),
             FMath::Max(1, FMath::RoundToInt(PrimaryViewSize.Y * RTSizeScale)));
-        const bool isRTSizeValid = (RTSize.X == DstTexture->Desc.Extent.X && RTSize.Y == DstTexture->Desc.Extent.Y);
+        const FIntPoint SrcSize = SceneColor.ViewRect.Size();
+        const FIntPoint DstSize = DstTexture->Desc.Extent;
+        const bool isRTSizeValid = SrcSize.Size() > 0 && DstSize.Size() > 0;
         if (isRTSizeValid)
         {
-            AddDrawTexturePass(GraphBuilder, View, SrcTexture, DstTexture, FIntPoint::ZeroValue, FIntPoint::ZeroValue, RTSize);
+            AddDrawTexturePass(GraphBuilder, View, SrcTexture, DstTexture, FIntPoint::ZeroValue, SrcSize, FIntPoint::ZeroValue, DstSize);
         }
     }
 
@@ -167,13 +169,15 @@ FScreenPassTexture FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap
         const float RTSizeScale = CopyPrevFrameBufferSettings->RTSizeScale;
         const FIntPoint RTSize = FIntPoint(FMath::Max(1, FMath::RoundToInt(PrimaryViewSize.X * RTSizeScale)),
             FMath::Max(1, FMath::RoundToInt(PrimaryViewSize.Y * RTSizeScale)));
-        const bool isRTSizeValid = (RTSize.X == DstTexture->Desc.Extent.X && RTSize.Y == DstTexture->Desc.Extent.Y);
+        const FScreenPassTexture& SceneColor = FScreenPassTexture::CopyFromSlice(GraphBuilder, InOutInputs.GetInput(EPostProcessMaterialInput::SceneColor));
+        const FIntPoint SrcSize = SceneColor.ViewRect.Size();
+        const FIntPoint DstSize = DstTexture->Desc.Extent;
+        const bool isRTSizeValid = SrcSize.Size() > 0 && DstSize.Size() > 0;
         if (isRTSizeValid)
         {
-            const FScreenPassTexture& SceneColor = FScreenPassTexture::CopyFromSlice(GraphBuilder, InOutInputs.GetInput(EPostProcessMaterialInput::SceneColor));
             check(SceneColor.IsValid());
             FRDGTextureRef SrcTexture = SceneColor.Texture;
-            AddDrawTexturePass(GraphBuilder, View, SrcTexture, DstTexture, FIntPoint::ZeroValue, FIntPoint::ZeroValue, RTSize);
+            AddDrawTexturePass(GraphBuilder, View, SrcTexture, DstTexture, FIntPoint::ZeroValue, SrcSize, FIntPoint::ZeroValue, DstSize);
         }
     }
     return InOutInputs.ReturnUntouchedSceneColorForPostProcessing(GraphBuilder);
