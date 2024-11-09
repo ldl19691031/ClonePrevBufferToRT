@@ -2,11 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/EngineSubsystem.h"
+#include "Subsystems/WorldSubsystem.h"
 #include <Engine/TextureRenderTarget2D.h>
 #include "CopyPrevFrameBufferManager.generated.h"
 
 UCLASS()
-class COPYPREVFRAMEBUFFER_API UCopyPrevFrameBufferManager : public UEngineSubsystem
+class COPYPREVFRAMEBUFFER_API UCopyPrevFrameBufferManager : public UWorldSubsystem
 {
     GENERATED_BODY()
 public:

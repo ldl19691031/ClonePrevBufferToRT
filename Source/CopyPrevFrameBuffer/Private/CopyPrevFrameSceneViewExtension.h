@@ -2,7 +2,7 @@
 #include "CoreMinimal.h"
 #include "SceneViewExtension.h"
 
-class FCopyPrevFrameSceneViewExtension : public FSceneViewExtensionBase
+class FCopyPrevFrameSceneViewExtension : public FWorldSceneViewExtension
 {
 public:
     // Begin FSceneViewExtensionBase
@@ -14,9 +14,11 @@ public:
     virtual void SubscribeToPostProcessingPass(EPostProcessingPass PassId, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled) override;
     // End FSceneViewExtensionBase
 
-    FCopyPrevFrameSceneViewExtension(const FAutoRegister& AutoRegister);
+    FCopyPrevFrameSceneViewExtension(const FAutoRegister& AutoRegister, UWorld* InWorld);
 
     ~FCopyPrevFrameSceneViewExtension();
+
+    TWeakObjectPtr<class UCopyPrevFrameBufferManager > Manager;
 private:
     bool NeedCopyPrevFrame = false;
 

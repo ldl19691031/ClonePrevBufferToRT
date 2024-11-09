@@ -65,7 +65,7 @@ void FCopyPrevFrameSceneViewExtension::SetupViewFamily(FSceneViewFamily& InViewF
 void FCopyPrevFrameSceneViewExtension::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
 {
     NeedCopyPrevFrame = false;
-    UCopyPrevFrameBufferManager* CopyPrevFrameBufferManager = GEngine->GetEngineSubsystem<UCopyPrevFrameBufferManager>();
+    UCopyPrevFrameBufferManager* CopyPrevFrameBufferManager = Manager.Get();
     if (CopyPrevFrameBufferManager == nullptr)
     {
         NeedCopyPrevFrame = false;
@@ -78,8 +78,7 @@ void FCopyPrevFrameSceneViewExtension::SetupView(FSceneViewFamily& InViewFamily,
         return;
     }
 
-    if (InView.bIsGameView == false
-        || InView.bIsSceneCapture)
+    if (InView.bIsSceneCapture)
     {
         NeedCopyPrevFrame = false;
         return;
@@ -129,8 +128,8 @@ void FCopyPrevFrameSceneViewExtension::SubscribeToPostProcessingPass(EPostProces
     }
 }
 
-FCopyPrevFrameSceneViewExtension::FCopyPrevFrameSceneViewExtension(const FAutoRegister& AutoRegister)
-    : FSceneViewExtensionBase(AutoRegister)
+FCopyPrevFrameSceneViewExtension::FCopyPrevFrameSceneViewExtension(const FAutoRegister& AutoRegister, UWorld* InWorld)
+    : FWorldSceneViewExtension(AutoRegister, InWorld)
 {
 }
 
