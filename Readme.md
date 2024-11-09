@@ -29,3 +29,8 @@ Click the RT you want to save, and assign a Render Target Texture.
 ## TODO
 
 * Add more supported buffers
+
+# Special Thanks
+
+* Asher : https://x.com/Vuthric
+

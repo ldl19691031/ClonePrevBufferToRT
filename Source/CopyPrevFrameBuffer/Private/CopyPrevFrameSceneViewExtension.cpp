@@ -122,7 +122,12 @@ void FCopyPrevFrameSceneViewExtension::BeginRenderViewFamily(FSceneViewFamily& I
 
 void FCopyPrevFrameSceneViewExtension::SubscribeToPostProcessingPass(EPostProcessingPass PassId, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled)
 {
-    if (PassId == EPostProcessingPass::FXAA)
+/*    if (bIsPassEnabled && PassId == EPostProcessingPass::FXAA)
+    {
+        InOutPassCallbacks.Add(FAfterPassCallbackDelegate::CreateRaw(this, &FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap_RenderThread));
+    }
+    else */
+    if (bIsPassEnabled && PassId == EPostProcessingPass::Tonemap)
     {
         InOutPassCallbacks.Add(FAfterPassCallbackDelegate::CreateRaw(this, &FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap_RenderThread));
     }
@@ -141,12 +146,31 @@ FScreenPassTexture FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap
 {
     
     // If the override output is provided, it means that this is the last pass in post processing.
-    if (NeedCopyPrevFrame == false)
+ /*   if (NeedCopyPrevFrame == false)
     {
         return InOutInputs.ReturnUntouchedSceneColorForPostProcessing(GraphBuilder);
-    }
+    }*/
     
+    const FScreenPassTexture& SceneColor = FScreenPassTexture::CopyFromSlice(GraphBuilder, InOutInputs.GetInput(EPostProcessMaterialInput::SceneColor));
+    check(SceneColor.IsValid());
 
+    FScreenPassRenderTarget Output = InOutInputs.OverrideOutput;
+
+    // If the override output is provided, it means that this is the last pass in post processing.
+    if (!Output.IsValid())
+    {
+        Output = FScreenPassRenderTarget::CreateFromInput(GraphBuilder, SceneColor, View.GetOverwriteLoadAction(), TEXT("CopyPrevFrameRenderTarget"));
+    }
+    const FScreenPassTexture& Input = SceneColor;
+    const FScreenPassTextureViewport InputViewport(Input);
+    const FScreenPassTextureViewport OutputViewport(Output);
+    FGlobalShaderMap* ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
+    TShaderMapRef<FScreenPassVS> VertexShader(ShaderMap);
+    
+    check(View.bIsViewInfo);
+    const auto& ViewInfo = static_cast<const FViewInfo&>(View);
+
+    AddCopyTexturePass(GraphBuilder, Input.Texture,Output.Texture);
     const UCopyPrevFrameBufferSettings* CopyPrevFrameBufferSettings = GetDefault<UCopyPrevFrameBufferSettings>();
     const bool bCopySceneColorAfterPostProcess = CopyPrevFrameBufferSettings->CopyFinalSceneColorToRT;
     if (bCopySceneColorAfterPostProcess
@@ -159,8 +183,7 @@ FScreenPassTexture FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap
             CopyPrevFrameBufferSettings->FinalSceneColorRT->GetRenderTargetResource()->GetRenderTargetTexture(),
             TEXT("PrevFrameColorRT_AfterPostProcess")
         );
-        check(View.bIsViewInfo);
-        const auto& ViewInfo = static_cast<const FViewInfo&>(View);
+
         
         FRDGTextureRef DstTexture = GraphBuilder.RegisterExternalTexture(this->PrevFrameColorRT_AfterPostProcess);
         const FIntRect PrimaryViewRect = ((const FViewInfo&)View).ViewRect;
@@ -168,7 +191,6 @@ FScreenPassTexture FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap
         const float RTSizeScale = CopyPrevFrameBufferSettings->RTSizeScale;
         const FIntPoint RTSize = FIntPoint(FMath::Max(1, FMath::RoundToInt(PrimaryViewSize.X * RTSizeScale)),
             FMath::Max(1, FMath::RoundToInt(PrimaryViewSize.Y * RTSizeScale)));
-        const FScreenPassTexture& SceneColor = FScreenPassTexture::CopyFromSlice(GraphBuilder, InOutInputs.GetInput(EPostProcessMaterialInput::SceneColor));
         const FIntPoint SrcSize = SceneColor.ViewRect.Size();
         const FIntPoint DstSize = DstTexture->Desc.Extent;
         const bool isRTSizeValid = SrcSize.Size() > 0 && DstSize.Size() > 0;
@@ -179,5 +201,5 @@ FScreenPassTexture FCopyPrevFrameSceneViewExtension::PostProcessPassAfterTonemap
             AddDrawTexturePass(GraphBuilder, View, SrcTexture, DstTexture, FIntPoint::ZeroValue, SrcSize, FIntPoint::ZeroValue, DstSize);
         }
     }
-    return InOutInputs.ReturnUntouchedSceneColorForPostProcessing(GraphBuilder);
+    return MoveTemp(Output);
 }
